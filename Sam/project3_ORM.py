@@ -13,6 +13,7 @@ from sqlalchemy import select
 
 from Sam.inventoryDB_enums import product_type_enum, payment_method_enum, delivery_status_enum
 
+# Credentials to my (Sam Bernau) personal linux server hosting a postgresql-13 database
 engine = create_engine("postgresql+psycopg2://jediknights:yoda123@homeoftopgs.ddns.net/jediknights")
 
 
@@ -30,24 +31,21 @@ class Product(Base):
     price: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
     pending_qty: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    # __table_args__ = (
-    #     CheckConstraint('qty >= 0', name='non_negative_qty'),
-    #     CheckConstraint('price >= 0.0', name='non_negative_price'),
-    #     CheckConstraint('pending_qty >= 0', name='non_negative_pending_qty')
-    # )
+    __table_args__ = (
+        CheckConstraint('qty >= 0'),
+        CheckConstraint('price >= 0.0'),
+        CheckConstraint('pending_qty >= 0')
+    )
 
 
 class ProductPriceHistory(Base):
     __tablename__ = 'product_price_history'
     price_history_id: Mapped[str] = mapped_column(String(50), primary_key=True)
-    previous_price: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
+    previous_price: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False, info={
+            "check_constraints": ["previous_qty >= 0"]})
     date_changed: Mapped[Date] = mapped_column(Date, default=func.now(), nullable=False)
     product_id: Mapped[str] = mapped_column(String(50), ForeignKey('product.product_id'), nullable=False)
     product: Mapped[Product] = relationship('product')
-
-    # __table_args__ = (
-    #     CheckConstraint('previous_price >= 0.0', name='positive_previous_price')
-    # )
 
 
 class Customer(Base):
@@ -64,18 +62,16 @@ class Payment(Base):
     __tablename__ = 'payment'
     payment_id: Mapped[str] = mapped_column(String(50), primary_key=True)
     payment_method: Mapped[str] = mapped_column(payment_method_enum, nullable=False)
-    total_price: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
-
-    # __table_args__ = (
-    #     CheckConstraint('total_price >= 0.0', name='positive_total_price'),
-    # )
+    total_price: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False, info={
+        "check_constraints": ["total_price >= 0.0"]})
 
 
 class CustomerOrder(Base):
     __tablename__ = 'customer_order'
     order_id: Mapped[str] = mapped_column(String(50), primary_key=True)
     date: Mapped[Date] = mapped_column(Date, default=func.now(), nullable=False)
-    total_qty: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_qty: Mapped[int] = mapped_column(Integer, nullable=False, default=0, info={
+        "check_constraints": ["total_qty >= 0"]})
     address: Mapped[str] = mapped_column(String(50), nullable=False)
     customer_id: Mapped[str] = mapped_column(String(50), ForeignKey('customer.customer_id'), nullable=False)
     product_id: Mapped[str] = mapped_column(String(50), ForeignKey('product.product_id'), nullable=False)
