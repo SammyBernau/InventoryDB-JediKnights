@@ -2,10 +2,8 @@ from typing import List
 from typing import Optional
 from datetime import date
 import psycopg2
-from sqlalchemy import ForeignKey, Numeric, CheckConstraint, Date, func
 from sqlalchemy import String, Integer
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
@@ -13,8 +11,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from pprint import pprint
 from project3_ORM import Product, ProductPriceHistory, Customer, Payment, CustomerOrder, Delivery
-
-from inventoryDB_enums import product_type_enum, payment_method_enum, delivery_status_enum
 
 engine = create_engine("postgresql+psycopg2://jediknights:yoda123@homeoftopgs.ddns.net/jediknights")
 
@@ -29,13 +25,14 @@ with Session(engine) as session:
        .join(Delivery, Delivery.order_id == CustomerOrder.order_id)\
        .join(Customer, Customer.customer_id == CustomerOrder.customer_id)\
        .where(Payment.total_price < 50.00)
+print("First query\n\n\n")
 
 
 for record in records:
      #  print(record.name,"has paid with",record.payment_method,"and their order is currently",record.delivery_status)
-     print("---------------------------------------------------------------------------------------")
-     print(f"||{record.name:20} {record.payment_method:20} {record.delivery_status:20} {record.total_price:10}||")
-     print("---------------------------------------------------------------------------------------")
+     print(" --------------------------------------------------------------------------")
+     print(f"|{record.name:20} {record.payment_method:20} {record.delivery_status:20} {record.total_price:10}|")
+     print(" --------------------------------------------------------------------------")
 
 
 
@@ -47,10 +44,12 @@ query = session.query(Customer.name, CustomerOrder.total_qty, Payment.payment_me
      .order_by(Customer.name.asc())
 
 results = query.all()
+print("Second query\n\n\n")
 
 for result in results:
-    print("||{:20}||{:20}||{:20}||".format(result.name,result.total_qty,result.payment_method))
-
+    print(" --------------------------------------------------------------")
+    print("|{:20} {:10} {:29}|".format(result.name,result.total_qty,result.payment_method))
+    print(" --------------------------------------------------------------")
 
 query = session.query(Customer.customer_id.label('Customer_ID'), Customer.name.label('Customer_Name'), Product.name.label('Product_Name'), Payment.total_price.label('total'))\
         .join(CustomerOrder, CustomerOrder.customer_id == Customer.customer_id)\
@@ -64,9 +63,13 @@ data = query.all()
 
 #print the results
 
-for result in data:
-        print("{:30}{:20}{:20}".format(result.Customer_Name, result.Product_Name, result.total))
 
+print("Third query\n\n\n")
+
+for result in data:
+    print(" --------------------------------------------------------------------------")
+    print("|{:30} {:20} {:21}|".format(result.Customer_Name, result.Product_Name, result.total))
+    print(" --------------------------------------------------------------------------")
 
 
 
