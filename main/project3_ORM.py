@@ -1,7 +1,4 @@
 from typing import List
-from typing import Optional
-from datetime import date
-import psycopg2
 from sqlalchemy import ForeignKey, Numeric, CheckConstraint, Date, func
 from sqlalchemy import String, Integer
 from sqlalchemy.orm import DeclarativeBase
@@ -9,11 +6,8 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-from sqlalchemy import select
-from pprint import pprint
 
-from inventoryDB_enums import product_type_enum, payment_method_enum, delivery_status_enum
+from inventoryDB_enums import *
 
 # Credentials to my (Sam Bernau) personal linux server hosting a postgresql-13 database
 engine = create_engine("postgresql+psycopg2://jediknights:yoda123@homeoftopgs.ddns.net/jediknights")
@@ -53,6 +47,7 @@ class ProductPriceHistory(Base):
     date_changed: Mapped[Date] = mapped_column(Date, default=func.now(), nullable=False)
     product_id: Mapped[str] = mapped_column(String(50), ForeignKey('product.product_id'), nullable=False)
     product: Mapped["Product"] = relationship(back_populates='pph')
+
     def __repr__(self) -> str:
         return f"ProductPriceHisory(previous_price={self.previous_price!r})"
 
@@ -66,10 +61,11 @@ class Customer(Base):
     email: Mapped[str] = mapped_column(String(50), nullable=False)
     password: Mapped[str] = mapped_column(String(50), nullable=False)
     carts: Mapped["Cart"] = relationship(back_populates="customer", cascade="all, delete-orphan")
-    customerorder: Mapped["CustomerOrder"] = relationship("CustomerOrder",back_populates="customer")
+    customer_order: Mapped["CustomerOrder"] = relationship("CustomerOrder", back_populates="customer")
 
     def __repr__(self) -> str:
         return f"Customer(name={self.name!r})"
+
 
 class Payment(Base):
     __tablename__ = 'payment'
@@ -77,7 +73,6 @@ class Payment(Base):
     payment_method: Mapped[str] = mapped_column(payment_method_enum, nullable=False)
     total_price: Mapped[float] = mapped_column(Numeric(precision=10, scale=2), nullable=False, info={
         "check_constraints": ["total_price >= 0.0"]})
-
 
 
 class CustomerOrder(Base):
@@ -90,7 +85,7 @@ class CustomerOrder(Base):
     customer_id: Mapped[str] = mapped_column(String(50), ForeignKey('customer.customer_id'), nullable=False)
     product_id: Mapped[str] = mapped_column(String(50), ForeignKey('product.product_id'), nullable=False)
     payment_id: Mapped[str] = mapped_column(String(50), ForeignKey('payment.payment_id'), nullable=False)
-    customer: Mapped[Customer] = relationship("Customer", back_populates="customerorder")
+    customer: Mapped[Customer] = relationship("Customer", back_populates="customer_order")
     product: Mapped[Product] = relationship(back_populates='customer_order')
     payment: Mapped[Payment] = relationship()
     delivery: Mapped["Delivery"] = relationship(back_populates='customer_order')
@@ -108,15 +103,17 @@ class Delivery(Base):
 
 class Cart(Base):
     __tablename__ = 'cart'
-    customer_id: Mapped[Customer] = mapped_column(String(50), ForeignKey('customer.customer_id'), primary_key=True, nullable=False)
-    product_id: Mapped[Product] = mapped_column(String(50), ForeignKey('product.product_id'), primary_key=True, nullable=False)
+    customer_id: Mapped[Customer] = mapped_column(String(50), ForeignKey('customer.customer_id'), primary_key=True,
+                                                  nullable=False)
+    product_id: Mapped[Product] = mapped_column(String(50), ForeignKey('product.product_id'), primary_key=True,
+                                                nullable=False)
     customer: Mapped[List["Customer"]] = relationship("Customer", back_populates='carts')
 
 
 # creates tables only if they don't exist
 Base.metadata.create_all(engine, checkfirst=True)
 
-#with Session(engine) as session:
+# with Session(engine) as session:
 
 #   customers = [
 #       Customer(customer_id='C001', name='Jane Smith', phone_number='555-1234', address='123 Main St',
@@ -279,3 +276,63 @@ Base.metadata.create_all(engine, checkfirst=True)
 # session.add_all(data)
 # session.commit()
 
+# more_products_and_price_history = [
+#         Product(product_id='P011', name='Baseball Hat', description='Comfortable and stylish hat',
+#                 product_type='Apparel and accessories', qty=20, price=19.99, pending_qty=0),
+#
+#         ProductPriceHistory(price_history_id='PPH011', previous_price=24.99, date_changed='2022-04-01',
+#                             product_id='P011'),
+#
+#         Product(product_id='P012', name='Canon EOS R5', description='Professional mirrorless camera',
+#                 product_type='Electronics and technology', qty=5, price=3799.99, pending_qty=0),
+#
+#         ProductPriceHistory(price_history_id='PPH012', previous_price=3999.99, date_changed='2022-03-20',
+#                             product_id='P012'),
+#
+#         Product(product_id='P013', name='Garden Hose', description='Durable and flexible hose for outdoor use',
+#                 product_type='Home and garden', qty=15, price=29.99, pending_qty=0),
+#
+#         ProductPriceHistory(price_history_id='PPH013', previous_price=39.99, date_changed='2022-02-28',
+#                             product_id='P013'),
+#
+#         Product(product_id='P014', name='Vitamin C Serum', description='Brightening and hydrating serum for skin',
+#                 product_type='Health and beauty', qty=30, price=24.99, pending_qty=0),
+#
+#         ProductPriceHistory(price_history_id='PPH014', previous_price=29.99, date_changed='2022-03-10',
+#                             product_id='P014'),
+#
+#         Product(product_id='P015', name='Organic Coffee Beans',
+#                 description='Ethically sourced and roasted coffee beans', product_type='Food and beverage', qty=40,
+#                 price=12.99, pending_qty=0),
+#
+#         ProductPriceHistory(price_history_id='PPH015', previous_price=14.99, date_changed='2022-03-01',
+#                             product_id='P015'),
+#
+#         Product(product_id='P016', name='Yoga Mat', description='Comfortable and non-slip mat for yoga practice',
+#                 product_type='Sports and outdoors', qty=25, price=39.99, pending_qty=0),
+#
+#         ProductPriceHistory(price_history_id='PPH016', previous_price=49.99, date_changed='2022-03-05',
+#                             product_id='P016'),
+#
+#         Product(product_id='P017', name='LEGO Star Wars Millennium Falcon', description='Iconic spaceship building set',
+#                 product_type='Toys and games', qty=10, price=179.99, pending_qty=0),
+#
+#         ProductPriceHistory(price_history_id='PPH017', previous_price=199.99, date_changed='2022-03-15',
+#                             product_id='P017'),
+#
+#         Product(product_id='P018', name='Car Floor Mats', description='Heavy-duty mats to protect car floors',
+#                 product_type='Automotive and industrial', qty=20, price=49.99, pending_qty=0),
+#
+#         ProductPriceHistory(price_history_id='PPH018', previous_price=59.99, date_changed='2022-03-10',
+#                             product_id='P018'),
+#
+#         Product(product_id='P019', name='Highlighter Pens',
+#                 description='Assorted colors for highlighting and note-taking',
+#                 product_type='Office and school supplies', qty=50, price=9.99, pending_qty=0),
+#
+#         ProductPriceHistory(price_history_id='PPH019', previous_price=12.99, date_changed='2022-03-01',
+#                             product_id='P019'),
+#
+#     ]
+# session.add_all(more_products_and_price_history)
+# session.commit()
